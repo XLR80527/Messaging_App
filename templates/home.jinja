@@ -1,0 +1,1050 @@
+<!-- 
+    Here you'll find the main exhibit: the chat application code. Feel free to look around!
+-->
+{% extends 'base.jinja' %}
+
+
+{% block content %} 
+   
+   <style>
+    nav {
+        border-bottom: 1px solid black;
+        overflow: auto
+    }
+
+    #message_box {
+        border: 1px solid black; 
+        height: 400px; 
+        width: 400px; 
+        overflow: auto;
+        padding: 2px;
+    }
+
+    #message_alert {
+        border: 1px solid black;
+        height: 400px;
+        width: 210px;
+        overflow: auto;
+        padding: 2px;
+        float: right;
+        position: relative;
+        top: -450px;
+        right: 140px;
+    }
+
+    #friend_request_sent {
+        border: 1px solid black;
+        height: 400px;
+        width: 210px;
+        overflow: auto;
+        padding: 2px;
+        float: right;
+        position: relative;
+        top: -450px;
+        right: 95px;
+    }
+
+    #friend_request_received {
+        border: 1px solid black;
+        height: 400px;
+        width: 210px;
+        overflow: auto;
+        padding: 2px;
+        float: right;
+        position: relative;
+        top: -450px;
+        right: 40px;
+    }
+
+    #friend_list {
+        border: 1px solid black;
+        height: 400px;
+        width: 170px;
+        overflow: auto;
+        padding: 2px;
+        float: right;
+        position: relative;
+        top: -450px;
+    }
+
+    #add_friend {
+        position: absolute;
+        right: 10px;
+    }
+
+    #approve_reject {
+        position: absolute;
+        right: 280px;
+        top: 620px;
+    }
+    
+    #knowledge_repository {
+        position: absolute;
+        right: 100px;
+        top: 65px;
+    }
+    
+    #log_out {
+        position: absolute;
+        right: 10px;
+        top: 65px;
+    }
+
+    #sidePanel {
+        position: fixed;
+        top: 0;
+        right: -250px;
+        width: 250px;
+        height: 100%;
+        background-color: white;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        transition: right 0.3s ease;
+        z-index: 999; 
+    }
+
+    #toggleButton {
+        position: absolute;
+        top: 50px;
+        right: 5px;
+        z-index: 1000; 
+    }
+
+    .text  {
+        margin-top: 2px;
+        margin-bottom: 2px;
+    }
+
+    h2{text-aligh: right; white-space: pre;}
+
+    .popup {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: #fff;
+        padding: 20px;
+        border: 1px solid #ccc;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        z-index: 9999;
+        max-width: 80%;
+        width: 400px;
+    }
+
+    .popup input[type="text"],
+    .popup button {
+        display: block;
+    }
+
+    .noMessage {
+        color: #888;
+        text-align: center;
+        margin-top: 50px;
+    }
+
+</style>
+
+<!--Navbar, you'll see the username here-->
+<nav style="border-bottom: 1px solid black;">
+    <ol style="float: right">
+        <li style="display:inline-block; position:relative; z-index: 1000;"><button onclick="toggleSidePanel()">Show user info</button></li>
+    </ol>
+</nav>
+
+<h2>Chat Box                                                            Message reminder          Request Sent           Request Receive            Friend List</h2>
+
+<main>
+    <!-- The messages are displayed here -->
+    <section id="message_box">
+    </section>
+
+    <!-- These part ideally should be a form element, 
+    but I wrote this code a year ago and I don't want to break anything...-->
+    <section id="chat_box">
+        <p class="text">Chat with: </p>
+        <input id="receiver" placeholder="username">
+        <!-- MDN says its bad practice to use the onclick attribute,
+        but we're using it anyways coz its easy :)-->
+        <button onclick="join_room()">Chat</button>
+    </section>
+
+    <!-- The (message) input box is set to display: none initially, 
+    this means the input box is "invisible" initially-->
+    <section id="input_box" style="display: none" >
+        <p class="text">Message: </p>
+        <input id="message" placeholder="Type your message here">
+        <button onclick="send()">Send</button>
+        <button onclick="leave()">Leave Room</button>
+        <button onclick="toggleSearchPopup()">Search Chat History</button>
+    </section>
+
+    <section id = "add_friend">
+        <p class="text">Add friend: </p>
+        <input id="receiver1" placeholder="username">
+        <button onclick="extract_friend_request()">Add</button>
+    </section>
+
+    <section id = "log_out">
+        <button onclick="log_out()">Log out</button>
+    </section>
+
+    <section id ="friend_list"></section>
+    <section id ="friend_request_received"></section>
+    <section id ="friend_request_sent"></section>
+    <section id ="message_alert">
+    </section>
+    
+    <section id = "knowledge_repository">
+        <button onclick="knowledge()">Knowledge Repository</button>
+    </section>
+
+    <div id="sidePanel">
+        <h2>User Info</h2>
+        <p>Username: {{ username }}</p>
+        <p>Role: <span id="userRole"></span></p>
+        
+    </div>
+
+    <div class="popup" id="searchPopup">
+        <div style="position: relative;">
+            <h2 style="margin-top: 0;">Search Chat History</h2>
+            <button style="position: absolute; top: 0; right: 0;" onclick="toggleSearchPopup()">Close</button>
+        </div>
+        <input type="text" id="searchInput" placeholder="Enter username or chat message" style="width: 300px; margin-top: 20px;">
+        <button onclick="searchChatHistory()" style="margin-top: 10px;">Search</button>
+        <div id="searchResults" style="border: 1px solid #ccc; padding: 10px; margin-top: 20px; height: 200px; overflow-y: auto;"></div>
+    </div>
+
+</main>
+
+<script src="/static/js/libs/socket.io.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+
+    
+    
+    var sidePanel = document.getElementById("sidePanel");
+    var toggleButton = document.getElementById("toggleButton");
+    
+    function toggleSidePanel() {
+        if (sidePanel.style.right === "0px") {
+            sidePanel.style.right = "-250px";
+        } else {
+            sidePanel.style.right = "0px";
+        }
+    }
+
+    let key = null;
+    let room_id = 0;
+
+    // when the user presses the "Enter" key inside of the "message box", 
+    // the message is sent to the server
+    $("#message").on("keyup", (e) => {
+        if (e.key == "Enter") {
+            send();
+        }
+    })
+
+    // when the user presses the enter key inside of the "receiver box"
+    // the user joins a (socket) room
+     $("#receiver").on("keyup", (e) => {
+        if (e.key == "Enter") {
+            join_room();
+        }
+    })
+
+
+    $(document).ready(() => {
+        // room_id is undefined if the user hasn't joined a room
+        // we early return in this case
+        if (Cookies.get("room_id") == undefined) {
+            return;
+        }
+
+        // the user has already joined an existing room
+        // we'll display the message box, instead of the "Chat with: " box
+        $("#chat_box").hide();
+        $("#input_box").show();
+        room_id = parseInt(Cookies.get("room_id"));
+    })
+    
+    // Here's the Socket IO part of the code
+    // things get a bit complicated here so brace yourselves :P
+    let username = "{{ username }}";
+
+    Cookies.set('username', username);
+
+    // initializes the socket
+    const socket = io();
+
+    // an incoming message arrives, we'll add the message to the message box
+    socket.on("incoming", (msg, color="black") => {
+        add_message(msg, color);
+    })
+
+    socket.on("incoming_history", (sender, message) => {
+        socket.emit("historykey", sender, message);
+    })
+
+    socket.on("gethistory", (sender, message_key, message) => {
+        var keyArray = new Uint8Array(message_key);
+        var keyStr = "";
+        for (var i = 0; i < keyArray.length; i++) {
+            keyStr += String.fromCharCode(keyArray[i]);
+        }
+        var decrypted = CryptoJS.AES.decrypt(message, keyStr).toString(CryptoJS.enc.Utf8);
+        add_message(sender + ":" + decrypted, "grey");    
+    })
+  
+    socket.on("incoming_send", (username, encryptedMessage, signature, key) => {
+        socket.emit("getkey", username);
+        socket.once("key", (message_key) => {
+            var keyArray = new Uint8Array(message_key);
+            var keyStr = "";
+            for (var i = 0; i < keyArray.length; i++) {
+                keyStr += String.fromCharCode(keyArray[i]);
+            }
+            var decrypted = CryptoJS.AES.decrypt(encryptedMessage, keyStr).toString(CryptoJS.enc.Utf8);
+            verify_mac({message: decrypted, signature: signature}, key).then((verify) => {
+                if(verify){
+                    add_message(username + ":" + decrypted, "black");
+                }
+            });
+        })
+    })
+    
+    function verify_mac(Data, key) {
+        return crypto.subtle.importKey(
+            "raw", 
+            key,
+            { name: "HMAC", hash: {name: "SHA-256"} }, 
+            true, 
+            ["verify"]
+        ).then((key) => {
+            return crypto.subtle.verify(
+                "HMAC", 
+                key, 
+                Data.signature,
+                new TextEncoder().encode(Data.message)
+            );
+        }).then((isValid) => {
+            if (isValid) {
+                return true;
+            } else {
+                console.error("Signature is not valid");
+                return null;
+            }
+        }).catch((error) => {
+            console.error("Decryption error:", error);
+        });
+    }
+
+    
+    // we'll send the message to the server by emitting a "send" event
+    async function send() {
+        try {
+            var value = await check_cookie('{{username}}');
+            
+            if (value === "FALSE") {
+                alert("please reauthenticate! Possible causes are listed below:\n- cookie does not match with current user\n- cookie is expired\n- cookie is missing")
+                socket.emit("delete_online", username);
+                window.open('/', '_self')
+                return
+            }
+        }catch (error) {
+            console.error(error);
+        }
+
+        let message = $("#message").val();
+        key = crypto.getRandomValues(new Uint8Array(16));
+        mac_signature(message, key).then((signature) => {
+            socket.emit("getkey", username);
+            socket.once("key", (message_key) => {
+                var keyArray = new Uint8Array(message_key);
+                var keyStr = "";
+                for (var i = 0; i < keyArray.length; i++) {
+                    keyStr += String.fromCharCode(keyArray[i]);
+                }
+                var encrypted = CryptoJS.AES.encrypt(message, keyStr).toString();
+                socket.emit("send", username, encrypted, signature, key, room_id);
+                socket.emit("history",username, encrypted, room_id);
+            })
+        });  
+        $("#message").val("");
+    } 
+    
+    function mac_signature(message, key) {
+        return crypto.subtle.importKey(
+            "raw", 
+            key,
+            { name: "HMAC", hash: {name: "SHA-256"} }, 
+            true, 
+            ["sign"]
+        ).then((key) => {
+            return crypto.subtle.sign(
+                "HMAC", 
+                key, 
+                new TextEncoder().encode(message)
+            );
+        }).then((signature) => {
+            return signature;
+        }).catch((error) => {
+            console.error("Encryption error:", error);
+        });
+    }
+
+
+    // we emit a join room event to the server to join a room
+    async function join_room() {
+
+        let URL1 = "{{ url_for('get_mute_status') }}";
+
+        let res1 = await axios.post(URL1, {
+            username: '{{username}}'
+        });
+        
+        if (res1.data === 'TRUE') {
+            alert("You are muted")
+            return
+        }
+
+        try {
+            var value = await check_cookie('{{username}}');
+            
+            if (value === "FALSE") {
+                alert("please reauthenticate! Possible causes are listed below:\n- cookie does not match with current user\n- cookie is expired\n- cookie is missing")
+                socket.emit("delete_online", username);
+                window.open('/', '_self')
+                return
+            }
+        }catch (error) {
+            console.error(error);
+        }
+       
+        let receiver = $("#receiver").val();
+        let res2 = await axios.post(URL1, {
+            username: receiver
+        });
+        
+        if (res2.data === 'TRUE') {
+            alert(receiver + " is muted")
+            return
+        }
+
+        // pass in the receiver of our message to the server
+        // as well as the current user's username
+        socket.emit("join", username, receiver, (res) => {
+            // res is a string with the error message if the error occurs
+            // this is a pretty bad way of doing error handling, but watevs
+            if (typeof res != "number") {
+                alert(res);
+                return;
+            }
+
+            // set the room id variable to the room id returned by the server
+            room_id = res;
+            Cookies.set("room_id", room_id);
+
+            // now we'll show the input box, so the user can input their message
+            $("#chat_box").hide();
+            $("#input_box").show();
+        });
+     
+    }
+    async function openChat(username,friendUsername){
+
+        let URL1 = "{{ url_for('get_mute_status') }}";
+
+        let res1 = await axios.post(URL1, {
+            username: '{{username}}'
+        });
+        
+        if (res1.data === 'TRUE') {
+            alert("You are muted")
+            return
+        }
+
+        let res2 = await axios.post(URL1, {
+            username: friendUsername
+        });
+        
+        if (res2.data === 'TRUE') {
+            alert(friendUsername + " is muted")
+            return
+        }
+
+        try {
+            var value = await check_cookie('{{username}}');
+            
+            if (value === "FALSE") {
+                alert("please reauthenticate! Possible causes are listed below:\n- cookie does not match with current user\n- cookie is expired\n- cookie is missing")
+                socket.emit("delete_online", username);
+                window.open('/', '_self')
+                return
+            }
+        }catch (error) {
+            console.error(error);
+        }
+
+        socket.emit("join", username, friendUsername, (res) => {
+            if (typeof res != "number") {
+                alert(res);
+                return;
+            }
+
+            room_id = res;
+            Cookies.set("room_id", room_id);
+
+            // now we'll show the input box, so the user can input their message
+            $("#chat_box").hide();
+            $("#input_box").show();
+        });
+     
+    }
+
+    // function when the user clicks on "Leave Room"
+    // emits a "leave" event, telling the server that we want to leave the room
+    async function leave() {
+        try {
+            var value = await check_cookie('{{username}}');
+            
+            if (value === "FALSE") {
+                alert("please reauthenticate! Possible causes are listed below:\n- cookie does not match with current user\n- cookie is expired\n- cookie is missing")
+                socket.emit("delete_online", username);
+                window.open('/', '_self')
+                return
+            }
+        }catch (error) {
+            console.error(error);
+        }
+        $("#message_box").empty();
+
+        Cookies.remove("room_id");
+        socket.emit("leave", username, room_id);
+        $("#input_box").hide();
+        $("#chat_box").show();
+    }
+
+    // function to add a message to the message box
+    // called when an incoming message has reached a client
+    function add_message(message, color) {
+        let box = $("#message_box");
+        let child = $(`<p style="color:${color}; margin: 0px;"></p>`).text(message);
+        box.append(child);
+    }
+
+
+    async function extract_friend_request() {
+        
+        try {
+            var value = await check_cookie('{{username}}');
+            
+            if (value === "FALSE") {
+                alert("please reauthenticate! Possible causes are listed below:\n- cookie does not match with current user\n- cookie is expired\n- cookie is missing")
+                socket.emit("delete_online", username);
+                window.open('/', '_self')
+                return
+            }
+        }catch (error) {
+            console.error(error);
+        }
+
+        var friendUsername = document.getElementById("receiver1").value;
+        if (friendUsername === "") {
+            alert("Missing input")
+            return
+        }
+
+        if (friendUsername === '{{username}}') {
+            alert("Can't send friend request to yourself!")
+            return
+        }
+
+        try {
+            var value = await check_user(friendUsername);
+            
+            if (value != "TRUE") {
+                alert(friendUsername + " does not exist.")
+                return
+            }
+        }catch (error) {
+            console.error(error);
+        }
+
+        try {
+            var exist = await check_friend_exist('{{username}}', friendUsername);
+            if (exist === "TRUE") {
+                alert(friendUsername + " is already in your friend list.")
+                return
+            }
+        } catch (error) {
+            console.error(error);
+        }
+
+        update_request('{{username}}', friendUsername);
+        alert("Friend request send to " + friendUsername)
+    }
+
+    async function update_request(user, friend) {
+
+        try {
+            var value = await check_cookie('{{username}}');
+            
+            if (value === "FALSE") {
+                alert("please reauthenticate! Possible causes are listed below:\n- cookie does not match with current user\n- cookie is expired\n- cookie is missing")
+                socket.emit("delete_online", username);
+                window.open('/', '_self')
+                return
+            }
+        }catch (error) {
+            console.error(error);
+        }
+        
+        fetch('/update_request?user=' + user + '&friend=' + friend)
+            .then(response => response.text())
+            .then(data => console.log(data))
+            .catch(error => console.error('Error:', error));
+    }
+
+    async function add_sent_message(user) {
+
+        document.getElementById("friend_request_sent").innerHTML = "";
+        fetch('/add_sent_message?user=' + user) 
+            .then(response => {
+                if (response.headers.get('content-type').includes('application/json')) {
+                    return response.json();
+                } else {
+                    return response.text();
+                }
+            })
+            .then(data => {
+                var ls = data;
+                let box = $('#friend_request_sent');
+                for (let i = 0; i < ls.length; i++) {
+                    let msg = $(`<p style="color:black; margin: 0px;"></p>`).text(ls[i]);
+                    box.append(msg)
+        }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+    
+    async function add_received_message(user) {
+
+        document.getElementById("friend_request_received").innerHTML = "";
+        fetch('/add_received_message?user=' + user) 
+            .then(response => {
+                if (response.headers.get('content-type').includes('application/json')) {
+                    return response.json();
+                } else {
+                    return response.text();
+                }
+            })
+            .then(data => {
+                var ls = data;
+                if (ls != "") {
+                    let box = $('#friend_request_received');
+                    for (let i = 0; i < ls.length; i++) {
+                        let container = $('<div style="display: flex; align-items: center; margin-bottom: 10px;"></div>');
+                        let msg = $(`<p style="color:black; margin: 0px;"></p>`).text(ls[i]);
+                        let b1 = $(`<button style="color:black; margin: 3px; display: block;">Approve</button>`);
+                        let b2 = $(`<button style="color:black; margin: 6px; display: block;">Reject</button>`);
+                        b1.click(() => {
+                            approve_request('{{username}}', (ls[i].split("-"))[1]);
+                        });
+                        b2.click(() => {
+                            reject_request('{{username}}', (ls[i].split("-"))[1]);
+                        });
+                        
+                        container.append(msg)
+                        container.append(b1)
+                        container.append(b2)
+                        box.append(container)
+                    }
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    async function add_friend_message(user) {
+
+        document.getElementById("friend_list").innerHTML = "";
+        fetch('/add_friend_message?user=' + user) 
+            .then(response => {
+                if (response.headers.get('content-type').includes('application/json')) {
+                    return response.json();
+                } else {
+                    return response.text();
+                }
+            })
+            .then(data => {
+                var ls = data;
+                if (ls.length === 1 && ls[0] === "") {
+                    $('#friend_list').html('<div style="color: grey; text-align: center;">No friend</div>');
+                } else {
+                    getOnlineUsers().then(online_users => {
+                        let box = $('#friend_list');
+                        processFriend(0, ls, online_users, box, user);
+                    });
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+
+    function processFriend(index, friends, online_users, box, user) {
+        if (index >= friends.length) {
+            return;
+        }
+
+        let friend = friends[index];
+        let isOnline = online_users.includes(friend);
+        let friendElement = $('<div style="display: flex; align-items: center;"></div>');
+        let statusDot = $('<div style="width: 10px; height: 10px; border-radius: 50%;"></div>');
+        if (isOnline) {
+            statusDot.css('background-color', 'green');
+        } else {
+            statusDot.css('background-color', 'red');
+        }
+        friendElement.append(statusDot);
+
+        socket.removeAllListeners('user_role');
+
+        socket.emit("get_user_role", friend);
+
+        socket.once("user_role", (role) => {
+            if (role == "Student") {
+                friendElement.append(`<span>STD</span>`);
+            }
+            if (role == "Academics") {
+                friendElement.append(`<span>AC</span>`);
+            }
+            if (role == "Administrative") {
+                friendElement.append(`<span>AS</span>`);
+            }
+            if (role == "Admin") {
+                friendElement.append(`<span>AU</span>`);
+            }
+
+            processFriend(index + 1, friends, online_users, box, user);
+        });
+
+        friendElement.append(`<span>${friend}</span>`);
+        let joinRoomButton = $('<button style="margin-left: 10px;">join</button>');
+        joinRoomButton.click(() => {
+            openChat(user, friend);
+        });
+        friendElement.append(joinRoomButton);
+        let deleteButton = $('<button style="margin-left: 10px;">delete</button>');
+        deleteButton.click(() => {
+            deleteFriend(user, friend);
+        });
+        friendElement.append(deleteButton);
+        box.append(friendElement);
+        box.append('<br>');
+    }
+
+    async function getOnlineUsers() {
+        try {
+            const response = await fetch('/online_users');
+            if (!response.ok) {
+                throw new Error('Description Failed to obtain the online user list');
+            }
+            const data = await response.json();
+            return data.online_users;
+        } catch (error) {
+            console.error('Error:', error);
+            return [];
+        }
+    }
+
+    async function deleteFriend(user, friend) {
+        try {
+            var value = await check_cookie('{{username}}');
+            
+            if (value === "FALSE") {
+                alert("please reauthenticate! Possible causes are listed below:\n- cookie does not match with current user\n- cookie is expired\n- cookie is missing")
+                socket.emit("delete_online", username);
+                window.open('/', '_self')
+                return
+            }
+        }catch (error) {
+            console.error(error);
+        }
+
+        fetch('/delete_friend?user=' + user + '&friend=' + friend)
+            .then(response => response.text())
+            .then(data => {
+                var value = data
+                if (value != "TRUE") {
+                    return
+                }
+                alert("Friends deleted.")
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    async function approve_request(user, friend) {
+        try {
+            var value = await check_cookie('{{username}}');
+            
+            if (value === "FALSE") {
+                alert("please reauthenticate! Possible causes are listed below:\n- cookie does not match with current user\n- cookie is expired\n- cookie is missing")
+                socket.emit("delete_online", username);
+                window.open('/', '_self')
+                return
+            }
+        }catch (error) {
+            console.error(error);
+        }
+
+        fetch('/approve?user=' + user + '&friend=' + friend)
+            .then(response => response.text())
+            .then(data => {
+                var value = data
+                if (value != "TRUE") {
+                    return
+                }
+                alert("Friend request approved.")
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    async function reject_request(user, friend) {
+        try {
+            var value = await check_cookie('{{username}}');
+            
+            if (value === "FALSE") {
+                alert("please reauthenticate! Possible causes are listed below:\n- cookie does not match with current user\n- cookie is expired\n- cookie is missing")
+                socket.emit("delete_online", username);
+                window.open('/', '_self')
+                return
+            }
+        }catch (error) {
+            console.error(error);
+        }
+
+        fetch('/reject?user=' + user)
+            .then(response => response.text())
+            .then(data => {
+                var value = data
+                if (value === "FALSE") {
+                    return
+                }
+                alert("Friend request rejected.")
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    async function update_all() {
+        try {
+            var value = await check_cookie('{{username}}');
+            
+            if (value === "FALSE") {
+                alert("please reauthenticate! Possible causes are listed below:\n- cookie does not match with current user\n- cookie is expired\n- cookie is missing")
+                socket.emit("delete_online", username);
+                window.open('/', '_self')
+                return
+            }
+        }catch (error) {
+            console.error(error);
+        }
+        check_message('{{username}}');
+        add_sent_message('{{username}}');
+        add_received_message('{{username}}');
+        add_friend_message('{{username}}');
+    }
+    
+    async function log_out(){
+        socket.emit("delete_online", username);
+        window.open('/', '_self')
+    }
+    
+
+    function check_friend_exist(user, friend) {
+        return new Promise((resolve, reject) => {
+            fetch('/check_friend_exist?user=' + user + '&friend=' + friend)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.text();
+                })
+                .then(data => {
+                    var exist = data;
+                    if (exist === "TRUE") {
+                        alert(friend + ' already exists in the friend list.');
+                    }
+                    resolve(exist);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    reject(error);
+                });
+        });
+    }
+    
+    $(document).ready(() => {
+        $(".friend_name").click(function() {
+            let friendUsername = $(this).text();
+            startChatWithFriend(friendUsername);
+        });
+    });
+
+    function startChatWithFriend(friendUsername) {
+        $("#receiver").val(friendUsername); 
+        join_room(); 
+    }
+
+    function check_user(user) {
+        return new Promise((resolve, reject) => {
+            fetch('/check_user?user=' + user)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.text();
+                })
+                .then(data => {
+                    var value = data;
+                    resolve(value)
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    reject(error);
+                });
+        });
+    }
+
+    function check_cookie(user) {
+        return new Promise((resolve, reject) => {
+            fetch('/check_cookie?username=' + user)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.text();
+                })
+                .then(data => {
+                    var value = data;
+                    resolve(value)
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    reject(error);
+                });
+        });
+    }
+
+
+    $(document).ready(async () => {
+        socket.emit("get_user_role", username);
+        socket.once("user_role", (role) => {
+            if (role == "Administrative"){
+                role = "Administrative Staff"
+            }
+            if (role == "Admin"){
+                role = "Admin User"
+            }
+            document.getElementById('userRole').innerText = role;
+        });        
+    });
+
+    document.addEventListener("DOMContentLoaded", function() {
+        setInterval(update_all, 2500);
+    });
+
+
+    function isValidURL(string) {
+            if (string.length == 0) {
+                return false;
+            }
+            if (string[0] == "/") {
+                return true;
+            }
+            return false;
+        }
+    var isPageClosing = false;
+
+    async function knowledge() {
+        let URL = "{{ url_for('knowledge') }}";
+        var username = '{{username}}'
+
+        try{
+            let res = await axios.post(URL, {
+                username: username
+            });
+
+            if (!isValidURL(res.data)) {
+                alert(res.data);
+                return;
+            }
+            
+            window.open(res.data, "_self")
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    function toggleSearchPopup() {
+        let popup = document.getElementById("searchPopup");
+        popup.style.display = (popup.style.display === "none") ? "block" : "none";
+    }
+
+    function searchChatHistory() {
+        let userInput = document.getElementById("searchInput").value;
+        if (userInput.trim() === "") {
+            alert("Please enter search content!");
+            return;
+        }
+        socket.off("history_search");
+        socket.emit("history_check", username);
+        let searchResultsDiv = document.getElementById("searchResults");
+        searchResultsDiv.innerHTML = "";
+        let hasResults = false;
+        socket.on("history_search", (sender, message_key, message) => {
+            var keyArray = new Uint8Array(message_key);
+            var keyStr = "";
+            for (var i = 0; i < keyArray.length; i++) {
+                keyStr += String.fromCharCode(keyArray[i]);
+            }
+            var decrypted = CryptoJS.AES.decrypt(message, keyStr).toString(CryptoJS.enc.Utf8);
+            var mainString = sender + ":" + decrypted;
+            
+            if (mainString.includes(userInput)) {
+                hasResults = true;
+                var newRow = document.createElement("div");
+                newRow.className = "searchResultRow";
+                var newContent = document.createTextNode(mainString);
+                newRow.appendChild(newContent);
+                searchResultsDiv.appendChild(newRow);
+            }
+        });
+        setTimeout(() => {
+            if (!hasResults) {
+                var noMessageDiv = document.createElement("div");
+                noMessageDiv.className = "noMessage";
+                var noMessageText = document.createTextNode("No message");
+                noMessageDiv.appendChild(noMessageText);
+                searchResultsDiv.appendChild(noMessageDiv);
+            }
+        }, 100);
+    }
+
+    socket.on("history_decode", (sender, message) => {
+        socket.emit("gethistorykey", sender, message);
+    })
+
+    socket.on("show_offline_messages", function(message) {
+        let box = $("#message_alert");
+        let messageElement = $("<p></p>").text(message);
+        box.append(messageElement);
+    });
+
+    async function check_message(user) {
+        socket.emit("offlinemessages", user);
+        $("#message_alert").empty();
+    }
+
+</script>
+{% endblock %}

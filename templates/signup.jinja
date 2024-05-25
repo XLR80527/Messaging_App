@@ -1,0 +1,100 @@
+<!-- 
+Sign up page, pretty much the same as login.
+-->
+{% extends 'base.jinja' %}
+
+{% block content %} 
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
+        <h1>Sign Up</h1>
+        <p>Username</p>
+        <input id="username"/>
+        <p>Password</p>
+        <input id="password" type="password"/>
+        <p>Select Role</p>
+        <select id="role">
+            <option value="Student">student</option>
+            <option value="Academics">Academics</option>
+            <option value="Administrative">Administrative Staff</option>
+            <option value="Admin">Admin User</option>
+        </select>
+        <button onclick="signup()" style="margin-top: 10px;">Sign up</button>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+        <script>
+            function isValidURL(string) {
+                if (string.length == 0) {
+                    return false;
+                }
+                if (string[0] == "/") {
+                    return true;
+                }
+                return false;
+            }
+
+            function checkPassword(password) {
+                if (password.length < 8) {
+                    return "FALSE";
+                }
+                var regex = /[a-z]/;
+                if (regex.test(password) === false) {
+                    return "FALSE"
+                }
+                regex = /[A-Z]/;
+                if (regex.test(password) === false) {
+                    return "FALSE"
+                }
+                return "TRUE"
+            }
+
+            function generateSalt() {
+                var array = new Uint32Array(8);
+                window.crypto.getRandomValues(array);
+                var randomString = '';
+                for (var i = 0; i < array.length; i++) {
+                    randomString += (array[i] + 0x10000).toString(16).slice(-4);
+                }
+                return randomString;
+            }
+
+            function hashPassword(password, salt) {
+                var hashedPassword = CryptoJS.SHA256(password + salt);
+                return hashedPassword.toString(CryptoJS.enc.Hex);
+            }
+
+            // this function is identical to login(), see login.jinja
+            async function signup() {
+                let loginURL = "{{ url_for('signup_user') }}";
+                var username = document.getElementById("username").value;
+                var password = document.getElementById("password").value;
+                var role = document.getElementById("role").value;
+                var salt = generateSalt();
+                var hashedPassword = hashPassword(password, salt);
+
+                if (checkPassword(password) === "FALSE") {
+                    alert("Password must have at least 8 digits, including numbers, uppercase and lowercase letters")
+                    return
+                }
+
+                if (role === "") {
+                    alert("Please select a role");
+                    return;
+                }
+
+                let res = await axios.post(loginURL, {
+                    username: username,
+                    password: hashedPassword,
+                    js_salt: salt,
+                    js_hash: hashedPassword,
+                    role: role
+                });
+
+                if (!isValidURL(res.data)) {
+                    alert(res.data);
+                    return;
+                }
+                window.open(res.data, "_self")
+            }
+        </script>
+    </div>
+{% endblock %}
